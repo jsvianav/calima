@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -180,6 +181,104 @@ function isAdmin(req) {
   return token === ADMIN_PASSWORD;
 }
 
+async function sendConfirmationEmail(resData) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.log('EMAIL_USER o EMAIL_PASS no configurados. Saltando envío de correo de confirmación.');
+    return;
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS
+    }
+  });
+
+  function formatDateText(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    const dateObj = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+    let formatted = dateObj.toLocaleDateString('es-ES', options);
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }
+
+  const htmlContent = `
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e9ecef; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+      <div style="background-color: #0d5c75; padding: 30px; text-align: center; color: white;">
+        <h1 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px;">Finca Calima Villa Melissa</h1>
+        <p style="margin: 5px 0 0 0; opacity: 0.8; font-size: 14px;">Tu refugio familiar en el Lago Calima</p>
+      </div>
+      <div style="padding: 30px; line-height: 1.6; color: #495057;">
+        <h2 style="color: #0d5c75; margin-top: 0; font-size: 20px;">¡Hola, ${resData.name}!</h2>
+        <p>Hemos recibido tu solicitud de reserva en la Finca Calima Villa Melissa. A continuación, te compartimos el resumen de tu solicitud:</p>
+        
+        <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+           <table style="width: 100%; border-collapse: collapse;">
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #868e96; font-size: 13px;">HUÉSPED:</td>
+               <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #212529;">${resData.name}</td>
+             </tr>
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #868e96; font-size: 13px;">TELÉFONO:</td>
+               <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #212529;">${resData.phone}</td>
+             </tr>
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #868e96; font-size: 13px;">FECHA ENTRADA (CHECK-IN):</td>
+               <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #212529;">${formatDateText(resData.checkin)} (10:00 AM)</td>
+             </tr>
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #868e96; font-size: 13px;">FECHA SALIDA (CHECK-OUT):</td>
+               <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #212529;">${formatDateText(resData.checkout)} (4:00 PM)</td>
+             </tr>
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #868e96; font-size: 13px;">HUÉSPEDES:</td>
+               <td style="padding: 6px 0; font-weight: 600; text-align: right; color: #212529;">${resData.adults} Adultos${resData.kids > 0 ? `, ${resData.kids} Niños` : ''}</td>
+             </tr>
+             <tr style="border-top: 1px dashed #dee2e6; margin-top: 10px;">
+               <td style="padding: 10px 0 6px 0; font-weight: bold; color: #212529; font-size: 14px;">PRECIO TOTAL ESTIMADO:</td>
+               <td style="padding: 10px 0 6px 0; font-weight: bold; text-align: right; color: #0d5c75; font-size: 16px;">${resData.total}</td>
+             </tr>
+             <tr>
+               <td style="padding: 6px 0; font-weight: bold; color: #d9480f; font-size: 14px;">ABONO PARA SEPARAR:</td>
+               <td style="padding: 6px 0; font-weight: bold; text-align: right; color: #d9480f; font-size: 16px;">$100.000 COP</td>
+             </tr>
+           </table>
+        </div>
+
+        ${resData.comments ? `<p><strong>Comentarios adicionales:</strong><br><span style="font-style: italic; color: #868e96;">"${resData.comments}"</span></p>` : ''}
+        
+        <div style="background-color: #fff9db; border-left: 4px solid #fcc419; padding: 15px; border-radius: 4px; margin: 25px 0;">
+           <h4 style="margin: 0 0 5px 0; color: #f59f00;">¿Cómo confirmar tu reserva?</h4>
+           <p style="margin: 0; font-size: 14px;">Para asegurar tus fechas, se requiere realizar un abono de separación por un valor de <strong>$100.000 COP</strong>. Nos comunicaremos contigo a través de WhatsApp (al número registrado) o puedes escribirnos para coordinar los datos de transferencia bancaria.</p>
+        </div>
+
+        <p>Si tienes alguna duda, puedes responder a este correo o contactarnos directamente por WhatsApp al número <strong>+57 317 425 2048</strong>.</p>
+        <p>¡Esperamos tenerte pronto disfrutando de nuestro refugio!</p>
+      </div>
+      <div style="background-color: #f1f3f5; padding: 20px; text-align: center; font-size: 12px; color: #868e96; border-top: 1px solid #e9ecef;">
+        <p style="margin: 0;">Finca Calima Villa Melissa &copy; 2026. Todos los derechos reservados.</p>
+        <p style="margin: 5px 0 0 0;">Vía Jíguales, Calima, Valle del Cauca, Colombia</p>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"Finca Calima Villa Melissa" <${process.env.EMAIL_USER}>`,
+    to: resData.email,
+    subject: 'Confirmación de Solicitud de Reserva - Finca Calima Villa Melissa',
+    html: htmlContent
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Correo de confirmación enviado exitosamente:', info.messageId);
+  } catch (error) {
+    console.error('Error al enviar el correo de confirmación:', error);
+  }
+}
+
 // ==========================================================================
 // Endpoints API REST
 // ==========================================================================
@@ -216,7 +315,7 @@ app.post('/api/reservations', async (req, res) => {
 
   try {
     const result = await runCmd(sql, params);
-    res.status(201).json({
+    const resData = {
       id: result.lastID,
       checkin,
       checkout,
@@ -228,7 +327,12 @@ app.post('/api/reservations', async (req, res) => {
       comments,
       total,
       status: 'Sin Confirmar'
-    });
+    };
+
+    // Send confirmation email asynchronously (non-blocking)
+    sendConfirmationEmail(resData).catch(err => console.error('Error asíncrono de correo:', err));
+
+    res.status(201).json(resData);
   } catch (err) {
     res.status(500).json({ error: 'Error al registrar la reserva en la base de datos: ' + err.message });
   }

@@ -1566,3 +1566,43 @@ select:valid:user-valid {
   gap: 10px;
 }
 
+/* Responsive adjustments for Calendar Widget */
+@media (max-width: 576px) {
+  .calendar-widget {
+    padding: 12px;
+    border-radius: 12px;
+  }
+  
+  .calendar-nav h3 {
+    font-size: 1rem;
+  }
+  
+  .btn-cal-nav {
+    width: 30px;
+    height: 30px;
+    font-size: 0.9rem;
+  }
+  
+  .calendar-weekdays {
+    font-size: 0.7rem;
+    margin-bottom: 5px;
+  }
+  
+  .calendar-grid {
+    gap: 4px;
+  }
+  
+  .calendar-day {
+    font-size: 0.75rem;
+    border-radius: 6px;
+  }
+  
+  .calendar-legend {
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+    padding-top: 10px;
+  }
+}
+
+
