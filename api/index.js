@@ -28,19 +28,28 @@ if (usePg) {
   pgClient.connect((err) => {
     if (err) {
       console.error('Error al conectar con PostgreSQL:', err.message);
-      console.log('Haciendo fallback a SQLite local...');
-      usePg = false;
-      connectSqlite();
+      if (!process.env.VERCEL) {
+        console.log('Haciendo fallback a SQLite local...');
+        usePg = false;
+        connectSqlite();
+      } else {
+        console.error('Servidor ejecutándose en Vercel. Fallback a SQLite cancelado.');
+      }
     } else {
       console.log('Conectado exitosamente a la base de datos PostgreSQL online.');
       initDatabase();
     }
   });
 } else {
-  connectSqlite();
+  if (!process.env.VERCEL) {
+    connectSqlite();
+  } else {
+    console.error('DATABASE_URL no está configurada en Vercel. El backend no podrá operar.');
+  }
 }
 
 function connectSqlite() {
+  if (process.env.VERCEL) return;
   const sqlite3 = require('sqlite3').verbose();
   const dbFile = path.join(__dirname, '../database.sqlite');
   sqliteDb = new sqlite3.Database(dbFile, (err) => {

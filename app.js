@@ -192,9 +192,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!response.ok) throw new Error('Error al conectar con la API.');
       
       publicReservations = await response.json();
-      renderCalendar(currentCalYear, currentCalMonth);
     } catch (err) {
       console.error('Error cargando reservas:', err);
+      publicReservations = []; // Fallback to empty to allow rendering free calendar days
+    } finally {
+      renderCalendar(currentCalYear, currentCalMonth);
     }
   }
 
