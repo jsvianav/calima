@@ -14,18 +14,23 @@ app.use(express.urlencoded({ extended: true }));
 // Dynamic Database Connection
 let DATABASE_URL = process.env.DATABASE_URL;
 let usePg = !!DATABASE_URL;
-let pgClient = null;
+let pgPool = null;
 let sqliteDb = null;
 
 if (usePg) {
-  const { Client } = require('pg');
-  pgClient = new Client({
+  const { Pool } = require('pg');
+  pgPool = new Pool({
     connectionString: DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     }
   });
-  pgClient.connect((err) => {
+  pgPool.on('error', (err) => {
+    console.error('Error imprevisto en el pool de PostgreSQL:', err.message);
+  });
+  
+  // Test connection
+  pgPool.query('SELECT NOW()', (err, res) => {
     if (err) {
       console.error('Error al conectar con PostgreSQL:', err.message);
       if (!process.env.VERCEL) {
@@ -76,7 +81,8 @@ function queryAll(sql, params = []) {
   const preparedSql = prepareQuery(sql);
   return new Promise((resolve, reject) => {
     if (usePg) {
-      pgClient.query(preparedSql, params, (err, result) => {
+      if (!pgPool) return reject(new Error('PostgreSQL pool is not initialized.'));
+      pgPool.query(preparedSql, params, (err, result) => {
         if (err) reject(err);
         else resolve(result.rows);
       });
@@ -93,12 +99,13 @@ function runCmd(sql, params = []) {
   const preparedSql = prepareQuery(sql);
   return new Promise((resolve, reject) => {
     if (usePg) {
+      if (!pgPool) return reject(new Error('PostgreSQL pool is not initialized.'));
       let finalSql = preparedSql;
       const isInsert = sql.trim().toUpperCase().startsWith('INSERT');
       if (isInsert) {
         finalSql += ' RETURNING id';
       }
-      pgClient.query(finalSql, params, (err, result) => {
+      pgPool.query(finalSql, params, (err, result) => {
         if (err) reject(err);
         else {
           const lastID = isInsert && result.rows[0] ? result.rows[0].id : null;
@@ -154,7 +161,7 @@ function initDatabase() {
   }
 
   const dbPromise = usePg 
-    ? pgClient.query(createTableSql)
+    ? pgPool.query(createTableSql)
     : new Promise((resolve, reject) => {
         sqliteDb.run(createTableSql, (err) => {
           if (err) reject(err);
