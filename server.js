@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 // Dynamic Database Connection
-let DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_lA3kiFm9vTds@ep-rough-brook-at6k8p7h-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+let DATABASE_URL = process.env.DATABASE_URL;
 let usePg = !!DATABASE_URL;
 let pgClient = null;
 let sqliteDb = null;
