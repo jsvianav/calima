@@ -12,14 +12,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 // Dynamic Database Connection
-const usePg = !!process.env.DATABASE_URL;
+let DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_lA3kiFm9vTds@ep-rough-brook-at6k8p7h-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+let usePg = !!DATABASE_URL;
 let pgClient = null;
 let sqliteDb = null;
 
 if (usePg) {
   const { Client } = require('pg');
   pgClient = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     }
@@ -27,12 +28,19 @@ if (usePg) {
   pgClient.connect((err) => {
     if (err) {
       console.error('Error al conectar con PostgreSQL:', err.message);
+      console.log('Haciendo fallback a SQLite local...');
+      usePg = false;
+      connectSqlite();
     } else {
       console.log('Conectado exitosamente a la base de datos PostgreSQL online.');
       initDatabase();
     }
   });
 } else {
+  connectSqlite();
+}
+
+function connectSqlite() {
   const sqlite3 = require('sqlite3').verbose();
   const dbFile = path.join(__dirname, 'database.sqlite');
   sqliteDb = new sqlite3.Database(dbFile, (err) => {
