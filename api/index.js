@@ -50,7 +50,7 @@ if (usePg) {
 
 function connectSqlite() {
   if (process.env.VERCEL) return;
-  const sqlite3 = require('sqlite3').verbose();
+  const sqlite3 = eval("require")('sqlite3').verbose();
   const dbFile = path.join(__dirname, '../database.sqlite');
   sqliteDb = new sqlite3.Database(dbFile, (err) => {
     if (err) {
