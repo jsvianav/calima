@@ -3,20 +3,24 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "index.html",
+          "styles.css",
+          "app.js"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server.js"
-    },
-    {
-      "handle": "filesystem"
+      "dest": "/server.js"
     },
     {
       "src": "/(.*)",
-      "dest": "index.html"
+      "dest": "/server.js"
     }
   ]
 }
