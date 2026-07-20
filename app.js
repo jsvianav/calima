@@ -32,6 +32,15 @@ document.addEventListener('DOMContentLoaded', () => {
         navLinks.classList.remove('active');
       });
     });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (navLinks.classList.contains('active') && !navLinks.contains(e.target) && !menuToggle.contains(e.target)) {
+        menuToggle.setAttribute('aria-expanded', 'false');
+        menuToggle.classList.remove('active');
+        navLinks.classList.remove('active');
+      }
+    });
   }
 
   // ==========================================================================
